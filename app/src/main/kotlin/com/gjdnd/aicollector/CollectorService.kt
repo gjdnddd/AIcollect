@@ -35,7 +35,12 @@ class CollectorService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        rescanDownloads()
+        val filePath = intent?.getStringExtra(EXTRA_FILE_PATH)
+        if (filePath.isNullOrBlank()) {
+            rescanDownloads()
+        } else {
+            enqueueUpload(File(filePath))
+        }
         return START_STICKY
     }
 
@@ -99,6 +104,7 @@ class CollectorService : Service() {
             connectivityManager.registerDefaultNetworkCallback(callback)
             networkCallback = callback
         } catch (exception: SecurityException) {
+            UploadLogger(this).append("네트워크 상태 권한 없음 - 큐 자동 재시도 건너뜀")
             Log.w(TAG, "네트워크 상태 권한이 없어 큐 자동 재시도를 건너뜁니다.", exception)
         }
     }
@@ -134,6 +140,7 @@ class CollectorService : Service() {
         }
 
         Log.w(TAG, "파일 쓰기 안정화 실패: ${file.name}")
+        UploadLogger(this).append("파일 쓰기 안정화 실패: ${file.name}")
         return false
     }
 
@@ -142,6 +149,7 @@ class CollectorService : Service() {
     }
 
     companion object {
+        const val EXTRA_FILE_PATH = "extra_file_path"
         private const val TAG = "CollectorService"
         private const val NOTIFICATION_ID = 20260517
     }

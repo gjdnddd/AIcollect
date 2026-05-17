@@ -2,7 +2,6 @@ package com.gjdnd.aicollector
 
 import android.content.Context
 import android.util.Base64
-import android.util.Log
 import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
@@ -12,7 +11,8 @@ import java.util.Date
 import java.util.Locale
 
 class GitHubUploader(private val context: Context) {
-    private val prefs = context.getSharedPreferences(MainActivity.PREFS_NAME, Context.MODE_PRIVATE)
+    private val securePrefs = SecurePrefs(context).also { it.migrateLegacyValues() }
+    private val logger = UploadLogger(context)
     private val queue = UploadQueue(context)
 
     fun uploadOrQueue(file: File) {
@@ -20,9 +20,9 @@ class GitHubUploader(private val context: Context) {
             return
         }
 
-        val pat = prefs.getString(MainActivity.PREF_PAT, "").orEmpty().trim()
+        val pat = securePrefs.getPat().trim()
         if (pat.isEmpty()) {
-            Log.w(TAG, "PAT 미설정 — 설정 화면에서 입력 필요")
+            logger.append("PAT 미설정 - 설정 화면에서 입력 필요: ${file.name}")
             queue.enqueue(file.absolutePath)
             return
         }
@@ -30,13 +30,14 @@ class GitHubUploader(private val context: Context) {
         val result = runCatching { upload(file, pat) }
         if (result.getOrDefault(false)) {
             if (file.delete()) {
-                Log.i(TAG, "업로드 성공 후 원본 삭제: ${file.name}")
+                logger.append("업로드 성공 후 원본 삭제: ${file.name}")
             } else {
-                Log.w(TAG, "업로드 성공, 원본 삭제 실패: ${file.name}")
+                logger.append("업로드 성공, 원본 삭제 실패: ${file.name}")
             }
             queue.remove(file.absolutePath)
         } else {
-            Log.w(TAG, "업로드 실패 — 큐에 저장: ${file.name}")
+            val reason = result.exceptionOrNull()?.javaClass?.simpleName ?: "응답 오류"
+            logger.append("업로드 실패 - 큐에 저장: ${file.name} ($reason)")
             queue.enqueue(file.absolutePath)
         }
     }
@@ -98,7 +99,9 @@ class GitHubUploader(private val context: Context) {
 
     private fun openConnection(remotePath: String, method: String, pat: String): HttpURLConnection {
         val encodedPath = remotePath.split("/").joinToString("/") { encodePathSegment(it) }
-        val url = URL("https://api.github.com/repos/$OWNER/$REPO/contents/$encodedPath")
+        val owner = securePrefs.getRepoOwner()
+        val repo = securePrefs.getRepoName()
+        val url = URL("https://api.github.com/repos/$owner/$repo/contents/$encodedPath")
         return (url.openConnection() as HttpURLConnection).apply {
             requestMethod = method
             connectTimeout = 15_000
@@ -112,11 +115,5 @@ class GitHubUploader(private val context: Context) {
 
     private fun encodePathSegment(value: String): String {
         return java.net.URLEncoder.encode(value, "UTF-8").replace("+", "%20")
-    }
-
-    companion object {
-        private const val TAG = "GitHubUploader"
-        private const val OWNER = "gjdnddd"
-        private const val REPO = "AIkonw"
     }
 }

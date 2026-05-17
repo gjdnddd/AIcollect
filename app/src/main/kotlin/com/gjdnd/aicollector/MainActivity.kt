@@ -9,29 +9,25 @@ import android.os.Environment
 import android.os.PowerManager
 import android.provider.Settings
 import android.widget.Button
-import android.widget.EditText
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 
 class MainActivity : AppCompatActivity() {
     private lateinit var statusText: TextView
-    private lateinit var patInput: EditText
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         statusText = findViewById(R.id.statusText)
-        patInput = findViewById(R.id.patInput)
+        SecurePrefs(this).migrateLegacyValues()
 
-        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-        patInput.setText(prefs.getString(PREF_PAT, "").orEmpty())
+        findViewById<Button>(R.id.settingsButton).setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
 
-        findViewById<Button>(R.id.savePatButton).setOnClickListener {
-            prefs.edit().putString(PREF_PAT, patInput.text.toString().trim()).apply()
-            Toast.makeText(this, "PAT를 저장했습니다.", Toast.LENGTH_SHORT).show()
-            startCollectorIfReady()
+        findViewById<Button>(R.id.logButton).setOnClickListener {
+            startActivity(Intent(this, LogActivity::class.java))
         }
 
         findViewById<Button>(R.id.permissionButton).setOnClickListener {
@@ -70,10 +66,12 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateStatus() {
-        statusText.text = if (Environment.isExternalStorageManager()) {
-            getString(R.string.status_ready)
-        } else {
-            getString(R.string.status_permission_required)
+        val securePrefs = SecurePrefs(this)
+        val hasPat = securePrefs.getPat().isNotBlank()
+        statusText.text = when {
+            !Environment.isExternalStorageManager() -> getString(R.string.status_permission_required)
+            !hasPat -> getString(R.string.status_pat_required)
+            else -> getString(R.string.status_ready)
         }
     }
 
@@ -114,7 +112,6 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         const val PREFS_NAME = "ai_collector_prefs"
-        const val PREF_PAT = "pref_pat"
         private const val PREF_BATTERY_PROMPTED = "pref_battery_prompted"
         private const val REQUEST_NOTIFICATIONS = 1001
     }

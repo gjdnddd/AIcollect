@@ -6,6 +6,7 @@ import java.io.File
 
 class UploadQueue(context: Context) {
     private val prefs = context.getSharedPreferences(MainActivity.PREFS_NAME, Context.MODE_PRIVATE)
+    private val logger = UploadLogger(context)
 
     @Synchronized
     fun enqueue(path: String) {
@@ -13,6 +14,7 @@ class UploadQueue(context: Context) {
         if (!items.contains(path)) {
             items.add(path)
             save(items)
+            logger.append("큐 저장: ${File(path).name}")
         }
     }
 
@@ -40,6 +42,7 @@ class UploadQueue(context: Context) {
 
         if (existing.size != array.length()) {
             save(existing)
+            logger.append("존재하지 않는 큐 항목 정리")
         }
         return existing
     }
