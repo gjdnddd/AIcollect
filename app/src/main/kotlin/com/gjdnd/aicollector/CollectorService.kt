@@ -4,14 +4,10 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
-import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
-import android.net.ConnectivityManager
-import android.net.Network
 import android.os.Build
 import android.os.Environment
-import android.os.FileObserver
 import android.os.IBinder
 import android.util.Log
 import java.io.File
@@ -20,33 +16,34 @@ import java.util.concurrent.Executors
 class CollectorService : Service() {
     private val executor = Executors.newSingleThreadExecutor()
     private lateinit var uploader: GitHubUploader
-    private lateinit var connectivityManager: ConnectivityManager
-    private var fileObserver: FileObserver? = null
-    private var networkCallback: ConnectivityManager.NetworkCallback? = null
+    private lateinit var logger: UploadLogger
 
     override fun onCreate() {
         super.onCreate()
         uploader = GitHubUploader(applicationContext)
-        connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        logger = UploadLogger(applicationContext)
         startForegroundServiceNotification()
-        startNetworkCallback()
-        startDownloadObserver()
-        rescanDownloads()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val filePath = intent?.getStringExtra(EXTRA_FILE_PATH)
-        if (filePath.isNullOrBlank()) {
-            rescanDownloads()
-        } else {
-            enqueueUpload(File(filePath))
+        executor.execute {
+            try {
+                uploader.retryQueue()
+                if (filePath.isNullOrBlank()) {
+                    rescanDownloads()
+                } else {
+                    processFile(File(filePath))
+                }
+                logger.append("수집 실행 완료")
+            } finally {
+                stopSelf(startId)
+            }
         }
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
     override fun onDestroy() {
-        fileObserver?.stopWatching()
-        networkCallback?.let { connectivityManager.unregisterNetworkCallback(it) }
         executor.shutdown()
         super.onDestroy()
     }
@@ -81,47 +78,18 @@ class CollectorService : Service() {
         }
     }
 
-    private fun startDownloadObserver() {
-        val downloadDir = getDownloadDir()
-        val mask = FileObserver.CREATE or FileObserver.MOVED_TO or FileObserver.CLOSE_WRITE
-        fileObserver = object : FileObserver(downloadDir.absolutePath, mask) {
-            override fun onEvent(event: Int, path: String?) {
-                if (path.isNullOrBlank() || !path.endsWith(".md", ignoreCase = true)) {
-                    return
-                }
-                enqueueUpload(File(downloadDir, path))
-            }
-        }.also { it.startWatching() }
-    }
-
-    private fun startNetworkCallback() {
-        val callback = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) {
-                executor.execute { uploader.retryQueue() }
-            }
-        }
-        try {
-            connectivityManager.registerDefaultNetworkCallback(callback)
-            networkCallback = callback
-        } catch (exception: SecurityException) {
-            UploadLogger(this).append("네트워크 상태 권한 없음 - 큐 자동 재시도 건너뜀")
-            Log.w(TAG, "네트워크 상태 권한이 없어 큐 자동 재시도를 건너뜁니다.", exception)
-        }
-    }
-
     private fun rescanDownloads() {
         val files = getDownloadDir().listFiles { file ->
             file.isFile && file.extension.equals("md", ignoreCase = true)
         }.orEmpty()
 
-        files.forEach { enqueueUpload(it) }
+        logger.append("Downloads 수집 실행: ${files.size}개 발견")
+        files.forEach { processFile(it) }
     }
 
-    private fun enqueueUpload(file: File) {
-        executor.execute {
-            if (waitForStableFile(file)) {
-                uploader.uploadOrQueue(file)
-            }
+    private fun processFile(file: File) {
+        if (waitForStableFile(file)) {
+            uploader.uploadOrQueue(file)
         }
     }
 
@@ -140,7 +108,7 @@ class CollectorService : Service() {
         }
 
         Log.w(TAG, "파일 쓰기 안정화 실패: ${file.name}")
-        UploadLogger(this).append("파일 쓰기 안정화 실패: ${file.name}")
+        logger.append("파일 쓰기 안정화 실패: ${file.name}")
         return false
     }
 

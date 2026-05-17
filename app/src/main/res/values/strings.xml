@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">AI정보통합 수집앱</string>
-    <string name="status_ready">권한 확인 후 Downloads 폴더를 감시합니다.</string>
+    <string name="status_ready">수집 실행 버튼을 누르면 Downloads 폴더를 확인합니다.</string>
+    <string name="status_manual_ready">수집 실행 버튼을 누르면 Downloads 폴더를 확인합니다.</string>
     <string name="status_permission_required">파일 접근 권한이 필요합니다.</string>
     <string name="status_pat_required">설정 화면에서 GitHub PAT를 저장하세요.</string>
     <string name="pat_hint">GitHub PAT 입력</string>
@@ -12,7 +13,14 @@
     <string name="open_settings">설정</string>
     <string name="open_logs">로그</string>
     <string name="request_file_permission">파일 접근 권한 열기</string>
-    <string name="start_service">감시 시작</string>
+    <string name="start_service">수집 실행</string>
+    <string name="run_collection">수집 실행</string>
+    <string name="collection_started">수집을 시작했습니다.</string>
+    <string name="paste_file_name_hint">파일명 (비우면 자동 생성)</string>
+    <string name="paste_content_hint">여기에 내용을 붙여넣으세요.</string>
+    <string name="upload_paste">붙여넣기 업로드</string>
+    <string name="paste_empty">붙여넣을 내용이 없습니다.</string>
+    <string name="paste_upload_started">붙여넣기 업로드를 시작했습니다.</string>
     <string name="refresh_logs">새로고침</string>
     <string name="no_logs">로그 없음</string>
     <string name="share_target_label">AI정보통합에 업로드</string>
@@ -21,5 +29,5 @@
     <string name="share_processing">공유 파일 처리 중입니다.</string>
     <string name="notification_channel_name">AI정보통합 동기화</string>
     <string name="notification_title">AI정보통합 수집 중</string>
-    <string name="notification_text">Downloads 폴더의 .md 파일을 감시합니다.</string>
+    <string name="notification_text">요청한 .md 파일을 업로드합니다.</string>
 </resources>

@@ -6,20 +6,31 @@ import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.Environment
-import android.os.PowerManager
 import android.provider.Settings
 import android.widget.Button
+import android.widget.EditText
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
     private lateinit var statusText: TextView
+    private lateinit var pasteFileNameInput: EditText
+    private lateinit var pasteContentInput: EditText
+    private lateinit var logger: UploadLogger
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         statusText = findViewById(R.id.statusText)
+        pasteFileNameInput = findViewById(R.id.pasteFileNameInput)
+        pasteContentInput = findViewById(R.id.pasteContentInput)
+        logger = UploadLogger(this)
         SecurePrefs(this).migrateLegacyValues()
 
         findViewById<Button>(R.id.settingsButton).setOnClickListener {
@@ -34,30 +45,57 @@ class MainActivity : AppCompatActivity() {
             openAllFilesAccessSettings()
         }
 
-        findViewById<Button>(R.id.startButton).setOnClickListener {
-            startCollectorIfReady()
+        findViewById<Button>(R.id.collectButton).setOnClickListener {
+            runManualCollection()
+        }
+
+        findViewById<Button>(R.id.pasteUploadButton).setOnClickListener {
+            uploadPastedText()
         }
 
         requestNotificationPermissionIfNeeded()
-        promptBatteryOptimizationOnce()
-        startCollectorIfReady()
+        updateStatus()
     }
 
     override fun onResume() {
         super.onResume()
         updateStatus()
-        if (Environment.isExternalStorageManager()) {
-            startCollectorIfReady()
-        }
     }
 
-    private fun startCollectorIfReady() {
+    private fun runManualCollection() {
         updateStatus()
         if (!Environment.isExternalStorageManager()) {
+            Toast.makeText(this, R.string.status_permission_required, Toast.LENGTH_SHORT).show()
             return
         }
 
-        val intent = Intent(this, CollectorService::class.java)
+        startCollectorService(null)
+        logger.append("수동 수집 실행")
+        Toast.makeText(this, R.string.collection_started, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun uploadPastedText() {
+        val content = pasteContentInput.text.toString()
+        if (content.isBlank()) {
+            Toast.makeText(this, R.string.paste_empty, Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val fileName = normalizeFileName(pasteFileNameInput.text.toString())
+        val file = File(getStagingDir(), fileName)
+        file.writeText(content, Charsets.UTF_8)
+
+        startCollectorService(file.absolutePath)
+        logger.append("붙여넣기 업로드 실행: $fileName")
+        Toast.makeText(this, R.string.paste_upload_started, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun startCollectorService(filePath: String?) {
+        val intent = Intent(this, CollectorService::class.java).apply {
+            if (!filePath.isNullOrBlank()) {
+                putExtra(CollectorService.EXTRA_FILE_PATH, filePath)
+            }
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(intent)
         } else {
@@ -71,7 +109,7 @@ class MainActivity : AppCompatActivity() {
         statusText.text = when {
             !Environment.isExternalStorageManager() -> getString(R.string.status_permission_required)
             !hasPat -> getString(R.string.status_pat_required)
-            else -> getString(R.string.status_ready)
+            else -> getString(R.string.status_manual_ready)
         }
     }
 
@@ -92,27 +130,19 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun promptBatteryOptimizationOnce() {
-        val prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
-        if (prefs.getBoolean(PREF_BATTERY_PROMPTED, false)) {
-            return
-        }
+    private fun getStagingDir(): File {
+        return File(filesDir, "staging").also { it.mkdirs() }
+    }
 
-        val powerManager = getSystemService(POWER_SERVICE) as PowerManager
-        if (powerManager.isIgnoringBatteryOptimizations(packageName)) {
-            return
-        }
-
-        prefs.edit().putBoolean(PREF_BATTERY_PROMPTED, true).apply()
-        val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
-            data = Uri.parse("package:$packageName")
-        }
-        runCatching { startActivity(intent) }
+    private fun normalizeFileName(rawName: String): String {
+        val fallback = "paste-${SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())}.md"
+        val candidate = rawName.trim().ifBlank { fallback }
+        val withExtension = if (candidate.endsWith(".md", ignoreCase = true)) candidate else "$candidate.md"
+        return withExtension.replace(Regex("""[\\/:*?"<>|]"""), "_")
     }
 
     companion object {
         const val PREFS_NAME = "ai_collector_prefs"
-        private const val PREF_BATTERY_PROMPTED = "pref_battery_prompted"
         private const val REQUEST_NOTIFICATIONS = 1001
     }
 }
