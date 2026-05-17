@@ -95,8 +95,12 @@ class CollectorService : Service() {
                 executor.execute { uploader.retryQueue() }
             }
         }
-        connectivityManager.registerDefaultNetworkCallback(callback)
-        networkCallback = callback
+        try {
+            connectivityManager.registerDefaultNetworkCallback(callback)
+            networkCallback = callback
+        } catch (exception: SecurityException) {
+            Log.w(TAG, "네트워크 상태 권한이 없어 큐 자동 재시도를 건너뜁니다.", exception)
+        }
     }
 
     private fun rescanDownloads() {
