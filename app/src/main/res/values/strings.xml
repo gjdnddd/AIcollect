@@ -1,4 +1,13 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">AI정보통합 수집앱</string>
+    <string name="status_ready">권한 확인 후 Downloads 폴더를 감시합니다.</string>
+    <string name="status_permission_required">파일 접근 권한이 필요합니다.</string>
+    <string name="pat_hint">GitHub PAT 입력</string>
+    <string name="save_pat">PAT 저장</string>
+    <string name="request_file_permission">파일 접근 권한 열기</string>
+    <string name="start_service">감시 시작</string>
+    <string name="notification_channel_name">AI정보통합 동기화</string>
+    <string name="notification_title">AI정보통합 수집 중</string>
+    <string name="notification_text">Downloads 폴더의 .md 파일을 감시합니다.</string>
 </resources>
