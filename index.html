@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 정보통합 대시보드</title>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<style>
+/* ===== [VARS] 색상·치수 변수 ===== */
+:root {
+  --bg: #f4f5f7;
+  --panel: #ffffff;
+  --text: #1f2328;
+  --muted: #6b7280;
+  --accent: #2563eb;
+  --accent-soft: #eff4ff;
+  --border: #e5e7eb;
+  --code-bg: #f1f3f5;
+  --sidebar-w: 270px;
+  --header-h: 52px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", sans-serif;
+  background: var(--bg); color: var(--text); line-height: 1.65;
+}
+
+/* ===== [HEADER] 상단바 ===== */
+header {
+  position: fixed; top: 0; left: 0; right: 0; height: var(--header-h);
+  background: var(--panel); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px; padding: 0 16px; z-index: 30;
+}
+header h1 { font-size: 16px; font-weight: 700; }
+#menuBtn {
+  display: none; background: none; border: 1px solid var(--border);
+  border-radius: 6px; width: 34px; height: 34px; font-size: 18px; cursor: pointer;
+}
+
+/* ===== [SIDEBAR] 카테고리 + 목차 ===== */
+#sidebar {
+  position: fixed; top: var(--header-h); bottom: 0; left: 0; width: var(--sidebar-w);
+  background: var(--panel); border-right: 1px solid var(--border);
+  overflow-y: auto; padding: 14px; z-index: 20;
+}
+.cat {
+  display: block; width: 100%; text-align: left; background: none; border: none;
+  padding: 9px 10px; border-radius: 7px; font-size: 14px; font-weight: 600;
+  color: var(--text); cursor: pointer;
+}
+.cat:hover { background: var(--bg); }
+.cat.active { background: var(--accent-soft); color: var(--accent); }
+.toc { margin: 2px 0 8px 8px; }
+.toc a {
+  display: block; padding: 5px 10px; font-size: 13px; color: var(--muted);
+  text-decoration: none; border-left: 2px solid var(--border);
+}
+.toc a:hover { color: var(--accent); border-left-color: var(--accent); }
+
+/* ===== [MAIN] 본문 ===== */
+main {
+  margin-left: var(--sidebar-w); padding: calc(var(--header-h) + 24px) 32px 80px;
+  max-width: 940px;
+}
+#content {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 10px; padding: 32px 36px;
+}
+#content h1 { font-size: 24px; margin: 4px 0 16px; }
+#content h2 {
+  font-size: 19px; margin: 28px 0 12px; padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+#content h3 { font-size: 16px; margin: 18px 0 8px; }
+#content h4 { font-size: 14px; margin: 14px 0 6px; }
+#content p, #content li { font-size: 14.5px; }
+#content ul, #content ol { padding-left: 22px; margin: 8px 0; }
+#content blockquote {
+  border-left: 3px solid var(--accent); background: var(--accent-soft);
+  padding: 8px 14px; margin: 12px 0; color: #374151; border-radius: 0 6px 6px 0;
+}
+#content code {
+  background: var(--code-bg); padding: 1.5px 5px; border-radius: 4px;
+  font-size: 13px; font-family: "Consolas", "D2Coding", monospace;
+}
+#content pre {
+  background: var(--code-bg); padding: 14px 16px; border-radius: 8px;
+  overflow-x: auto; margin: 12px 0;
+}
+#content pre code { background: none; padding: 0; }
+#content table {
+  border-collapse: collapse; margin: 12px 0; width: 100%; font-size: 13.5px;
+}
+#content th, #content td {
+  border: 1px solid var(--border); padding: 7px 10px; text-align: left;
+}
+#content th { background: var(--bg); }
+#content a { color: var(--accent); }
+
+/* ===== [BACKDROP] 모바일 사이드바 배경 ===== */
+#backdrop {
+  display: none; position: fixed; inset: var(--header-h) 0 0 0;
+  background: rgba(0,0,0,0.35); z-index: 15;
+}
+
+/* ===== [RESPONSIVE] 모바일 ===== */
+@media (max-width: 760px) {
+  #menuBtn { display: block; }
+  #sidebar { transform: translateX(-100%); transition: transform .2s; }
+  #sidebar.open { transform: translateX(0); }
+  #backdrop.open { display: block; }
+  main { margin-left: 0; padding: calc(var(--header-h) + 16px) 14px 60px; }
+  #content { padding: 20px 18px; border-radius: 8px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <button id="menuBtn" aria-label="메뉴">&#9776;</button>
+  <h1>AI 정보통합 대시보드</h1>
+</header>
+
+<nav id="sidebar"></nav>
+<div id="backdrop"></div>
+
+<main>
+  <div id="content">불러오는 중…</div>
+</main>
+
+<script>
+/* ===== [STATE] 전역 상태 ===== */
+const sidebar = document.getElementById('sidebar');
+const content = document.getElementById('content');
+const backdrop = document.getElementById('backdrop');
+let categories = [];
+let activeIdx = -1;
+
+/* ===== [INIT] files.json 로드 ===== */
+async function init() {
+  try {
+    const res = await fetch('files.json?' + Date.now());
+    categories = (await res.json()).categories;
+  } catch (e) {
+    content.textContent = 'files.json을 불러오지 못했습니다.';
+    return;
+  }
+  renderSidebar();
+  if (categories.length) openCategory(0);
+}
+
+/* ===== [SIDEBAR] 카테고리 목록 렌더 ===== */
+function renderSidebar() {
+  sidebar.innerHTML = '';
+  categories.forEach((cat, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'cat' + (i === activeIdx ? ' active' : '');
+    btn.textContent = cat.title;
+    btn.onclick = () => openCategory(i);
+    sidebar.appendChild(btn);
+    if (i === activeIdx) {
+      const toc = document.createElement('div');
+      toc.className = 'toc';
+      toc.id = 'toc';
+      sidebar.appendChild(toc);
+    }
+  });
+}
+
+/* ===== [LOAD] 선택한 카테고리 .md 렌더 ===== */
+async function openCategory(i) {
+  activeIdx = i;
+  renderSidebar();
+  content.textContent = '불러오는 중…';
+  let md;
+  try {
+    const res = await fetch(categories[i].file + '?' + Date.now());
+    md = await res.text();
+  } catch (e) {
+    content.textContent = '문서를 불러오지 못했습니다.';
+    return;
+  }
+  content.innerHTML = marked.parse(md);
+  buildToc();
+  window.scrollTo(0, 0);
+  closeMenu();
+}
+
+/* ===== [TOC] 본문 h2로 목차 생성 ===== */
+function buildToc() {
+  const toc = document.getElementById('toc');
+  if (!toc) return;
+  toc.innerHTML = '';
+  content.querySelectorAll('h2').forEach((h, n) => {
+    const id = 'sec-' + n;
+    h.id = id;
+    const a = document.createElement('a');
+    a.textContent = h.textContent;
+    a.href = '#' + id;
+    a.onclick = (e) => {
+      e.preventDefault();
+      document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+      closeMenu();
+    };
+    toc.appendChild(a);
+  });
+}
+
+/* ===== [MENU] 모바일 사이드바 토글 ===== */
+function closeMenu() {
+  sidebar.classList.remove('open');
+  backdrop.classList.remove('open');
+}
+document.getElementById('menuBtn').onclick = () => {
+  sidebar.classList.toggle('open');
+  backdrop.classList.toggle('open');
+};
+backdrop.onclick = closeMenu;
+
+init();
+</script>
+</body>
+</html>

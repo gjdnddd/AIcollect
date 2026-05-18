@@ -1,0 +1,8 @@
+{
+  "categories": [
+    { "title": "AI 일반", "file": "content/AI일반.md" },
+    { "title": "Claude 활용", "file": "content/Claude활용.md" },
+    { "title": "Codex 활용", "file": "content/Codex활용.md" },
+    { "title": "Hermes 활용", "file": "content/Hermes활용.md" }
+  ]
+}
