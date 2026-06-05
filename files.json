@@ -1,6 +1,7 @@
 {
   "categories": [
     { "title": "AI 일반", "file": "content/AI일반.md" },
+    { "title": "세션 프롬프트", "file": "content/세션프롬프트.md" },
     { "title": "도구 선택 가이드", "file": "content/도구선택가이드.md" },
     { "title": "Claude 활용", "file": "content/Claude활용.md" },
     { "title": "Codex 활용", "file": "content/Codex활용.md" },
