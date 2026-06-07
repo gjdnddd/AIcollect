@@ -38,22 +38,42 @@ header h1 { font-size: 16px; font-weight: 700; }
   border-radius: 6px; width: 34px; height: 34px; font-size: 18px; cursor: pointer;
 }
 
-/* ===== [SIDEBAR] 카테고리 + 목차 ===== */
+/* ===== [SIDEBAR] 그룹 + 아이템 + 목차 ===== */
 #sidebar {
   position: fixed; top: var(--header-h); bottom: 0; left: 0; width: var(--sidebar-w);
   background: var(--panel); border-right: 1px solid var(--border);
-  overflow-y: auto; padding: 14px; z-index: 20;
+  overflow-y: auto; padding: 10px 8px; z-index: 20;
 }
+
+/* 그룹 헤더 */
+.group-header {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 8px; border-radius: 5px; margin-top: 4px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--muted);
+  cursor: pointer; user-select: none;
+}
+.group-header:hover { background: var(--bg); color: var(--text); }
+.group-arrow { font-size: 9px; transition: transform .15s; display: inline-block; }
+.group-arrow.open { transform: rotate(90deg); }
+
+/* 그룹 아이템 래퍼 */
+.group-items { margin-bottom: 4px; }
+.group-items.collapsed { display: none; }
+
+/* 카테고리 버튼 */
 .cat {
   display: block; width: 100%; text-align: left; background: none; border: none;
-  padding: 9px 10px; border-radius: 7px; font-size: 14px; font-weight: 600;
-  color: var(--text); cursor: pointer;
+  padding: 8px 10px 8px 20px; border-radius: 6px;
+  font-size: 13.5px; font-weight: 500; color: var(--text); cursor: pointer;
 }
 .cat:hover { background: var(--bg); }
-.cat.active { background: var(--accent-soft); color: var(--accent); }
-.toc { margin: 2px 0 8px 8px; }
+.cat.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+
+/* 목차 */
+.toc { margin: 2px 0 6px 20px; }
 .toc a {
-  display: block; padding: 5px 10px; font-size: 13px; color: var(--muted);
+  display: block; padding: 4px 10px; font-size: 12.5px; color: var(--muted);
   text-decoration: none; border-left: 2px solid var(--border);
 }
 .toc a:hover { color: var(--accent); border-left-color: var(--accent); }
@@ -134,48 +154,82 @@ main {
 const sidebar = document.getElementById('sidebar');
 const content = document.getElementById('content');
 const backdrop = document.getElementById('backdrop');
-let categories = [];
-let activeIdx = -1;
+let groups = [];
+let activeGi = -1;
+let activeIi = -1;
+const collapsedGroups = new Set();
 
 /* ===== [INIT] files.json 로드 ===== */
 async function init() {
   try {
     const res = await fetch('files.json?' + Date.now());
-    categories = (await res.json()).categories;
+    groups = (await res.json()).groups;
   } catch (e) {
     content.textContent = 'files.json을 불러오지 못했습니다.';
     return;
   }
   renderSidebar();
-  if (categories.length) openCategory(0);
+  if (groups.length && groups[0].items.length) openItem(0, 0);
 }
 
-/* ===== [SIDEBAR] 카테고리 목록 렌더 ===== */
+/* ===== [SIDEBAR] 그룹+아이템 렌더 ===== */
 function renderSidebar() {
   sidebar.innerHTML = '';
-  categories.forEach((cat, i) => {
-    const btn = document.createElement('button');
-    btn.className = 'cat' + (i === activeIdx ? ' active' : '');
-    btn.textContent = cat.title;
-    btn.onclick = () => openCategory(i);
-    sidebar.appendChild(btn);
-    if (i === activeIdx) {
-      const toc = document.createElement('div');
-      toc.className = 'toc';
-      toc.id = 'toc';
-      sidebar.appendChild(toc);
-    }
+  groups.forEach((group, gi) => {
+    const isCollapsed = collapsedGroups.has(gi);
+
+    /* 그룹 헤더 */
+    const hdr = document.createElement('div');
+    hdr.className = 'group-header';
+    const arrow = document.createElement('span');
+    arrow.className = 'group-arrow' + (isCollapsed ? '' : ' open');
+    arrow.textContent = '▶';
+    hdr.appendChild(arrow);
+    hdr.appendChild(document.createTextNode(' ' + group.title));
+    hdr.onclick = () => toggleGroup(gi);
+    sidebar.appendChild(hdr);
+
+    /* 그룹 아이템 */
+    const wrap = document.createElement('div');
+    wrap.className = 'group-items' + (isCollapsed ? ' collapsed' : '');
+
+    group.items.forEach((item, ii) => {
+      const isActive = gi === activeGi && ii === activeIi;
+      const btn = document.createElement('button');
+      btn.className = 'cat' + (isActive ? ' active' : '');
+      btn.textContent = item.title;
+      btn.onclick = () => openItem(gi, ii);
+      wrap.appendChild(btn);
+
+      if (isActive) {
+        const toc = document.createElement('div');
+        toc.className = 'toc';
+        toc.id = 'toc';
+        wrap.appendChild(toc);
+      }
+    });
+
+    sidebar.appendChild(wrap);
   });
 }
 
-/* ===== [LOAD] 선택한 카테고리 .md 렌더 ===== */
-async function openCategory(i) {
-  activeIdx = i;
+/* ===== [TOGGLE] 그룹 접기/펼치기 ===== */
+function toggleGroup(gi) {
+  if (collapsedGroups.has(gi)) collapsedGroups.delete(gi);
+  else collapsedGroups.add(gi);
+  renderSidebar();
+  if (activeGi === gi) buildToc();
+}
+
+/* ===== [LOAD] 선택한 아이템 .md 렌더 ===== */
+async function openItem(gi, ii) {
+  activeGi = gi; activeIi = ii;
+  collapsedGroups.delete(gi); /* 해당 그룹 자동 펼침 */
   renderSidebar();
   content.textContent = '불러오는 중…';
   let md;
   try {
-    const res = await fetch(categories[i].file + '?' + Date.now());
+    const res = await fetch(groups[gi].items[ii].file + '?' + Date.now());
     md = await res.text();
   } catch (e) {
     content.textContent = '문서를 불러오지 못했습니다.';
