@@ -23,6 +23,14 @@
         { "title": "개인생활", "file": "content/개인생활.md" },
         { "title": "금융관리", "file": "content/금융관리.md" }
       ]
+    },
+    {
+      "title": "독서",
+      "items": [
+        { "title": "달리오 원칙", "file": "content/독서/달리오원칙.md" },
+        { "title": "내면의 탁월함", "file": "content/독서/내면의탁월함.md" },
+        { "title": "실천 원칙", "file": "content/독서/실천원칙.md" }
+      ]
     }
   ]
 }
