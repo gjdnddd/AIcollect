@@ -31,6 +31,12 @@
         { "title": "내면의 탁월함", "file": "content/독서/내면의탁월함.md" },
         { "title": "실천 원칙", "file": "content/독서/실천원칙.md" }
       ]
+    },
+    {
+      "title": "계획",
+      "items": [
+        { "title": "제주여행 2025.07", "file": "content/계획/제주여행_2025_0726.md" }
+      ]
     }
   ]
 }
