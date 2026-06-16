@@ -33,6 +33,12 @@
       ]
     },
     {
+      "title": "투자리서치",
+      "items": [
+        { "title": "광통신 AI데이터센터", "file": "content/투자리서치/광통신_AI데이터센터.md" }
+      ]
+    },
+    {
       "title": "계획",
       "items": [
         { "title": "제주여행 2025.07", "file": "content/계획/제주여행_2025_0726.md" }
