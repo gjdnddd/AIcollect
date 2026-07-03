@@ -3,73 +3,67 @@
     {
       "title": "AI 공통",
       "items": [
-        { "title": "AI 일반", "file": "content/AI일반.md" },
-        { "title": "세션 프롬프트", "file": "content/세션프롬프트.md" },
-        { "title": "도구 선택 가이드", "file": "content/도구선택가이드.md" },
-        { "title": "프로젝트별 규칙", "file": "content/프로젝트별규칙.md" }
+        { "title": "AI 일반", "file": "content/AI일반.md", "url": "https://gjdnddd.github.io/AIcollect/content/AI일반.md" },
+        { "title": "세션 프롬프트", "file": "content/세션프롬프트.md", "url": "https://gjdnddd.github.io/AIcollect/content/세션프롬프트.md" },
+        { "title": "도구 선택 가이드", "file": "content/도구선택가이드.md", "url": "https://gjdnddd.github.io/AIcollect/content/도구선택가이드.md" },
+        { "title": "프로젝트별 규칙", "file": "content/프로젝트별규칙.md", "url": "https://gjdnddd.github.io/AIcollect/content/프로젝트별규칙.md" }
       ]
     },
     {
       "title": "AI 도구",
       "items": [
-        { "title": "Claude 활용", "file": "content/Claude활용.md" },
-        { "title": "Gemini 활용", "file": "content/Gemini활용.md" },
-        { "title": "Codex 활용", "file": "content/Codex활용.md" },
-        { "title": "Hermes 활용", "file": "content/Hermes활용.md" }
+        { "title": "Claude 활용", "file": "content/Claude활용.md", "url": "https://gjdnddd.github.io/AIcollect/content/Claude활용.md" },
+        { "title": "Gemini 활용", "file": "content/Gemini활용.md", "url": "https://gjdnddd.github.io/AIcollect/content/Gemini활용.md" },
+        { "title": "Codex 활용", "file": "content/Codex활용.md", "url": "https://gjdnddd.github.io/AIcollect/content/Codex활용.md" },
+        { "title": "Hermes 활용", "file": "content/Hermes활용.md", "url": "https://gjdnddd.github.io/AIcollect/content/Hermes활용.md" }
       ]
     },
     {
       "title": "개인",
       "items": [
-        { "title": "개인생활", "file": "content/개인생활.md" },
-        { "title": "금융관리", "file": "content/금융관리.md" }
+        { "title": "개인생활", "file": "content/개인생활.md", "url": "https://gjdnddd.github.io/AIcollect/content/개인생활.md" },
+        { "title": "금융관리", "file": "content/금융관리.md", "url": "https://gjdnddd.github.io/AIcollect/content/금융관리.md" }
       ]
     },
     {
       "title": "독서",
       "items": [
-        { "title": "달리오 원칙", "file": "content/독서/달리오원칙.md" },
-        { "title": "내면의 탁월함", "file": "content/독서/내면의탁월함.md" },
-        { "title": "아주 작은 습관의 힘", "file": "content/독서/아주작은습관의힘.md" },
-        { "title": "아주 작은 반복의 힘", "file": "content/독서/아주작은반복의힘.md" },
-        { "title": "실천 원칙", "file": "content/독서/실천원칙.md" }
+        { "title": "달리오 원칙", "file": "content/독서/달리오원칙.md", "url": "https://gjdnddd.github.io/AIcollect/content/독서/달리오원칙.md" },
+        { "title": "내면의 탁월함", "file": "content/독서/내면의탁월함.md", "url": "https://gjdnddd.github.io/AIcollect/content/독서/내면의탁월함.md" },
+        { "title": "아주 작은 습관의 힘", "file": "content/독서/아주작은습관의힘.md", "url": "https://gjdnddd.github.io/AIcollect/content/독서/아주작은습관의힘.md" },
+        { "title": "아주 작은 반복의 힘", "file": "content/독서/아주작은반복의힘.md", "url": "https://gjdnddd.github.io/AIcollect/content/독서/아주작은반복의힘.md" },
+        { "title": "실천 원칙", "file": "content/독서/실천원칙.md", "url": "https://gjdnddd.github.io/AIcollect/content/독서/실천원칙.md" }
       ]
     },
     {
       "title": "투자리서치",
       "items": [
-        { "title": "광통신 AI데이터센터", "file": "content/투자리서치/광통신_AI데이터센터.md" },
-        { "title": "MU 실적프리뷰 2026Q3", "file": "content/투자리서치/MU_실적프리뷰_2026Q3.md" }
+        { "title": "광통신 AI데이터센터", "file": "content/투자리서치/광통신_AI데이터센터.md", "url": "https://gjdnddd.github.io/AIcollect/content/투자리서치/광통신_AI데이터센터.md" },
+        { "title": "MU 실적프리뷰 2026Q3", "file": "content/투자리서치/MU_실적프리뷰_2026Q3.md", "url": "https://gjdnddd.github.io/AIcollect/content/투자리서치/MU_실적프리뷰_2026Q3.md" }
       ]
     },
     {
       "title": "매매전략",
       "items": [
-        { "title": "A. 시황·시장환경", "file": "content/매매전략/A_시황·시장환경.md" },
-        { "title": "B. 매매인프라·HTS", "file": "content/매매전략/B_매매인프라·HTS.md" },
-        { "title": "C. 종목선정", "file": "content/매매전략/C_종목선정.md" },
-        { "title": "D. 차트·파동", "file": "content/매매전략/D_차트·파동.md" },
-        { "title": "E1. 종가배팅", "file": "content/매매전략/E1_종가배팅.md" },
-        { "title": "E2. 양봉·상한가", "file": "content/매매전략/E2_양봉·상한가.md" },
-        { "title": "E3. 음봉매매", "file": "content/매매전략/E3_음봉매매.md" },
-        { "title": "E4. 돌파매매", "file": "content/매매전략/E4_돌파매매.md" },
-        { "title": "E5. 뉴스매매", "file": "content/매매전략/E5_뉴스매매.md" },
-        { "title": "E6. 대형주매매", "file": "content/매매전략/E6_대형주매매.md" },
-        { "title": "E7. 종합·기타", "file": "content/매매전략/E7_종합·기타.md" },
-        { "title": "F. 리스크·자금관리", "file": "content/매매전략/F_리스크·자금관리.md" },
-        { "title": "G. 심리·루틴·마인드", "file": "content/매매전략/G_심리·루틴·마인드.md" }
-      ]
-    },
-    {
-      "title": "투자리서치",
-      "items": [
-        { "title": "광통신 AI데이터센터", "file": "content/투자리서치/광통신_AI데이터센터.md" }
+        { "title": "A. 시황·시장환경", "file": "content/매매전략/A_시황·시장환경.md", "url": "https://gjdnddd.github.io/AIcollect/content/매매전략/A_시황·시장환경.md" },
+        { "title": "B. 매매인프라·HTS", "file": "content/매매전략/B_매매인프라·HTS.md", "url": "https://gjdnddd.github.io/AIcollect/content/매매전략/B_매매인프라·HTS.md" },
+        { "title": "C. 종목선정", "file": "content/매매전략/C_종목선정.md", "url": "https://gjdnddd.github.io/AIcollect/content/매매전략/C_종목선정.md" },
+        { "title": "D. 차트·파동", "file": "content/매매전략/D_차트·파동.md", "url": "https://gjdnddd.github.io/AIcollect/content/매매전략/D_차트·파동.md" },
+        { "title": "E1. 종가배팅", "file": "content/매매전략/E1_종가배팅.md", "url": "https://gjdnddd.github.io/AIcollect/content/매매전략/E1_종가배팅.md" },
+        { "title": "E2. 양봉·상한가", "file": "content/매매전략/E2_양봉·상한가.md", "url": "https://gjdnddd.github.io/AIcollect/content/매매전략/E2_양봉·상한가.md" },
+        { "title": "E3. 음봉매매", "file": "content/매매전략/E3_음봉매매.md", "url": "https://gjdnddd.github.io/AIcollect/content/매매전략/E3_음봉매매.md" },
+        { "title": "E4. 돌파매매", "file": "content/매매전략/E4_돌파매매.md", "url": "https://gjdnddd.github.io/AIcollect/content/매매전략/E4_돌파매매.md" },
+        { "title": "E5. 뉴스매매", "file": "content/매매전략/E5_뉴스매매.md", "url": "https://gjdnddd.github.io/AIcollect/content/매매전략/E5_뉴스매매.md" },
+        { "title": "E6. 대형주매매", "file": "content/매매전략/E6_대형주매매.md", "url": "https://gjdnddd.github.io/AIcollect/content/매매전략/E6_대형주매매.md" },
+        { "title": "E7. 종합·기타", "file": "content/매매전략/E7_종합·기타.md", "url": "https://gjdnddd.github.io/AIcollect/content/매매전략/E7_종합·기타.md" },
+        { "title": "F. 리스크·자금관리", "file": "content/매매전략/F_리스크·자금관리.md", "url": "https://gjdnddd.github.io/AIcollect/content/매매전략/F_리스크·자금관리.md" },
+        { "title": "G. 심리·루틴·마인드", "file": "content/매매전략/G_심리·루틴·마인드.md", "url": "https://gjdnddd.github.io/AIcollect/content/매매전략/G_심리·루틴·마인드.md" }
       ]
     },
     {
       "title": "계획",
       "items": [
-        { "title": "제주여행 2025.07", "file": "content/계획/제주여행_2025_0726.md" }
+        { "title": "제주여행 2025.07", "file": "content/계획/제주여행_2025_0726.md", "url": "https://gjdnddd.github.io/AIcollect/content/계획/제주여행_2025_0726.md" }
       ]
     }
   ]
