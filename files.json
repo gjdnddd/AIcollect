@@ -48,6 +48,12 @@
       ]
     },
     {
+      "title": "부동산",
+      "items": [
+        { "title": "매수수요와 점유유형", "file": "content/부동산/매수수요와점유유형.md", "url": "https://gjdnddd.github.io/AIcollect/content/부동산/매수수요와점유유형.md" }
+      ]
+    },
+    {
       "title": "매매전략",
       "items": [
         { "title": "A. 시황·시장환경", "file": "content/매매전략/A_시황·시장환경.md", "url": "https://gjdnddd.github.io/AIcollect/content/매매전략/A_시황·시장환경.md" },
