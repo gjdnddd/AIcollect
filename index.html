@@ -238,6 +238,11 @@ async function ensureIndexed() {
 
 /* ===== [SIDEBAR] 그룹+아이템 렌더 ===== */
 function renderSidebar() {
+  const prevInput = document.getElementById('searchInput');
+  const hadFocus = !!prevInput && document.activeElement === prevInput;
+  const selStart = hadFocus ? prevInput.selectionStart : null;
+  const selEnd = hadFocus ? prevInput.selectionEnd : null;
+
   sidebar.innerHTML = '';
 
   /* 검색창 */
@@ -318,6 +323,11 @@ function renderSidebar() {
     empty.className = 'search-empty';
     empty.textContent = '검색 결과가 없습니다.';
     sidebar.appendChild(empty);
+  }
+
+  if (hadFocus) {
+    input.focus();
+    input.setSelectionRange(selStart, selEnd);
   }
 }
 
