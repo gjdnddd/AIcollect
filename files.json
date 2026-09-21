@@ -3,7 +3,7 @@
     {
       "title": "국장복기 · 시나리오",
       "items": [
-        { "title": "갱신 정보", "file": "content/국장복기/시나리오/_갱신정보.md", "url": "https://gjdnddd.github.io/AIcollect/content/국장복기/시나리오/_갱신정보.md" },
+        { "title": "갱신 정보", "file": "content/국장복기/시나리오/갱신정보.md", "url": "https://gjdnddd.github.io/AIcollect/content/국장복기/시나리오/갱신정보.md" },
         { "title": "20260922 SK하이닉스", "file": "content/국장복기/시나리오/매매제안_20260922_SK하이닉스.md", "url": "https://gjdnddd.github.io/AIcollect/content/국장복기/시나리오/매매제안_20260922_SK하이닉스.md" },
         { "title": "20260922 삼성전자", "file": "content/국장복기/시나리오/매매제안_20260922_삼성전자.md", "url": "https://gjdnddd.github.io/AIcollect/content/국장복기/시나리오/매매제안_20260922_삼성전자.md" },
         { "title": "20260922 스카이랩스", "file": "content/국장복기/시나리오/매매제안_20260922_스카이랩스.md", "url": "https://gjdnddd.github.io/AIcollect/content/국장복기/시나리오/매매제안_20260922_스카이랩스.md" },
@@ -14,7 +14,7 @@
     {
       "title": "국장복기 · 스윙진행",
       "items": [
-        { "title": "갱신 정보", "file": "content/국장복기/스윙진행/_갱신정보.md", "url": "https://gjdnddd.github.io/AIcollect/content/국장복기/스윙진행/_갱신정보.md" },
+        { "title": "갱신 정보", "file": "content/국장복기/스윙진행/갱신정보.md", "url": "https://gjdnddd.github.io/AIcollect/content/국장복기/스윙진행/갱신정보.md" },
         { "title": "20260921 SK텔레콤", "file": "content/국장복기/스윙진행/매매제안_20260921_SK텔레콤.md", "url": "https://gjdnddd.github.io/AIcollect/content/국장복기/스윙진행/매매제안_20260921_SK텔레콤.md" },
         { "title": "20260921 코데즈컴바인", "file": "content/국장복기/스윙진행/매매제안_20260921_코데즈컴바인.md", "url": "https://gjdnddd.github.io/AIcollect/content/국장복기/스윙진행/매매제안_20260921_코데즈컴바인.md" },
         { "title": "20260921 현대엘리베이터", "file": "content/국장복기/스윙진행/매매제안_20260921_현대엘리베이터.md", "url": "https://gjdnddd.github.io/AIcollect/content/국장복기/스윙진행/매매제안_20260921_현대엘리베이터.md" }
