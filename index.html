@@ -253,7 +253,14 @@ function renderSidebar() {
   input.placeholder = indexing ? '본문 인덱싱 중…' : '검색어 입력…';
   input.value = searchQuery;
   input.disabled = indexing;
-  input.oninput = (e) => { searchQuery = e.target.value; renderSidebar(); };
+  input.oninput = (e) => {
+    searchQuery = e.target.value;
+    if (!e.isComposing) renderSidebar();
+  };
+  input.addEventListener('compositionend', (e) => {
+    searchQuery = e.target.value;
+    renderSidebar();
+  });
   searchWrap.appendChild(input);
 
   const optLabel = document.createElement('label');
