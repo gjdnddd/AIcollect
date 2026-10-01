@@ -86,11 +86,14 @@ header h1 { font-size: 16px; font-weight: 700; }
 .cat:hover { background: var(--bg); }
 .cat.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 
-/* 목차 */
+/* 목차 (선택한 문서 옆 ▶ 로 접고 펼침, 기본 접힘) */
+.toc-caret { display: inline-block; font-size: 9px; margin-right: 2px; transition: transform .15s; }
+.toc-caret.open { transform: rotate(90deg); }
 .toc { margin: 2px 0 6px 20px; }
 .toc a {
   display: block; padding: 4px 10px; font-size: 12.5px; color: var(--muted);
   text-decoration: none; border-left: 2px solid var(--border);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .toc a:hover { color: var(--accent); border-left-color: var(--accent); }
 
@@ -133,6 +136,40 @@ main {
 }
 #content th { background: var(--bg); }
 #content a { color: var(--accent); }
+
+/* ===== [PROPS] 문서 맨 앞 속성(YAML) — 접힌 "속성" ===== */
+#content details.props {
+  margin: 0 0 18px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg);
+}
+#content details.props > summary {
+  cursor: pointer; padding: 7px 12px; font-size: 13px; font-weight: 600; color: var(--muted); user-select: none;
+}
+#content details.props[open] > summary { border-bottom: 1px solid var(--border); }
+#content details.props table { margin: 0; border: none; font-size: 12.5px; }
+#content details.props th, #content details.props td { border: none; border-bottom: 1px solid var(--border); background: none; padding: 5px 12px; vertical-align: top; }
+#content details.props th { width: 110px; color: var(--muted); font-weight: 600; white-space: nowrap; }
+#content details.props tr:last-child th, #content details.props tr:last-child td { border-bottom: none; }
+#content details.props .chip { display: inline-block; margin: 1px 4px 1px 0; padding: 0 8px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); font-size: 12px; }
+
+/* ===== [CALLOUT] 옵시디언 콜아웃 > [!종류] ===== */
+#content blockquote.callout .callout-title { display: block; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+#content blockquote.callout-warning, #content blockquote.callout-caution, #content blockquote.callout-danger {
+  border-left-color: #d97706; background: #fff7ed;
+}
+#content blockquote.callout-success, #content blockquote.callout-tip, #content blockquote.callout-check {
+  border-left-color: #16a34a; background: #f0fdf4;
+}
+
+/* ===== [TABLE] 표가 화면보다 넓으면 표만 옆으로 스크롤 (페이지 전체가 밀리지 않게) ===== */
+#content .tbl-wrap { overflow-x: auto; margin: 12px 0; max-width: 100%; }
+#content .tbl-wrap > table { margin: 0; }
+
+/* ===== [IMG] 본문 그림 + 클릭 확대 ===== */
+#content img { max-width: 100%; height: auto; display: block; margin: 12px 0; border: 1px solid var(--border); border-radius: 6px; cursor: zoom-in; }
+#lightbox { display: none; position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.88); overflow: auto; }
+#lightbox.open { display: block; }
+#lightbox img { display: block; max-width: 96vw; max-height: 94vh; margin: 3vh auto; background: #fff; cursor: zoom-in; }
+#lightbox img.full { max-width: none; max-height: none; margin: 0; cursor: zoom-out; }
 
 /* ===== [BACKDROP] 모바일 사이드바 배경 ===== */
 #backdrop {
@@ -189,6 +226,7 @@ let groups = [];
 let activeGi = -1;
 let activeIi = -1;
 const collapsedGroups = new Set(); /* 기본값: 전부 접힘 */
+let tocOpen = false; /* 선택한 문서의 목차 펼침 여부 (기본 접힘, 문서를 새로 열 때마다 접힘으로 초기화) */
 let searchQuery = '';
 let searchBody = false;
 let indexing = false;
@@ -310,11 +348,21 @@ function renderSidebar() {
       const isActive = gi === activeGi && ii === activeIi;
       const btn = document.createElement('button');
       btn.className = 'cat' + (isActive ? ' active' : '');
-      btn.textContent = item.title;
-      btn.onclick = () => openItem(gi, ii);
+      if (isActive) {
+        /* 선택된 문서: ▶ 표시, 다시 누르면 목차 접기/펼치기 */
+        const caret = document.createElement('span');
+        caret.className = 'toc-caret' + (tocOpen ? ' open' : '');
+        caret.textContent = '▶';
+        btn.appendChild(caret);
+        btn.appendChild(document.createTextNode(' ' + item.title));
+        btn.onclick = () => { tocOpen = !tocOpen; renderSidebar(); };
+      } else {
+        btn.textContent = item.title;
+        btn.onclick = () => openItem(gi, ii);
+      }
       wrap.appendChild(btn);
 
-      if (isActive) {
+      if (isActive && tocOpen) {
         const toc = document.createElement('div');
         toc.className = 'toc';
         toc.id = 'toc';
@@ -336,6 +384,7 @@ function renderSidebar() {
     input.focus();
     input.setSelectionRange(selStart, selEnd);
   }
+  buildToc(); /* 목차가 펼쳐져 있으면 채운다 (접힘이면 #toc 자체가 없어 아무 일도 안 함) */
 }
 
 /* ===== [TOGGLE] 그룹 접기/펼치기 ===== */
@@ -349,6 +398,7 @@ function toggleGroup(gi) {
 /* ===== [LOAD] 선택한 아이템 .md 렌더 ===== */
 async function openItem(gi, ii) {
   activeGi = gi; activeIi = ii;
+  tocOpen = false; /* 새 문서는 목차 접힌 상태로 시작 */
   collapsedGroups.delete(gi); /* 해당 그룹 자동 펼침 */
   renderSidebar();
   content.textContent = '불러오는 중…';
@@ -360,11 +410,116 @@ async function openItem(gi, ii) {
     content.textContent = '문서를 불러오지 못했습니다.';
     return;
   }
-  content.innerHTML = marked.parse(md);
+  content.innerHTML = renderDoc(md);
+  enhanceCallouts(content);
+  wrapTables(content);
   buildToc();
   window.scrollTo(0, 0);
   closeMenu();
 }
+
+/* ===== [DOC] 문서 렌더: 속성(YAML) 분리 + 옵시디언 문법 정리 ===== */
+function escHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/* 문서 맨 앞 --- ... --- 블록을 떼어낸다 (그대로 두면 marked가 큰 제목(h2)으로 오해함) */
+function splitFrontmatter(md) {
+  const m = md.match(/^﻿?---[ \t]*\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/);
+  if (!m) return { rows: null, body: md };
+  const rows = [];
+  let cur = null;
+  m[1].split(/\r?\n/).forEach(line => {
+    const kv = line.match(/^([^\s:#-][^:]*):\s*(.*)$/);
+    if (kv) {
+      cur = { key: kv[1].trim(), vals: [] };
+      const v = kv[2].trim().replace(/^"(.*)"$/, '$1');
+      if (v) cur.vals.push(v);
+      rows.push(cur);
+    } else if (cur && line.trim()) {
+      cur.vals.push(line.trim().replace(/^-\s+/, ''));
+    }
+  });
+  return { rows, body: md.slice(m[0].length) };
+}
+
+function propsHtml(rows) {
+  if (!rows || !rows.length) return '';
+  const trs = rows.map(r => {
+    const isList = r.key === 'tags' || r.vals.length > 1;
+    const cell = isList ? r.vals.map(v => '<span class="chip">' + escHtml(v) + '</span>').join('') : escHtml(r.vals.join(' '));
+    return '<tr><th>' + escHtml(r.key) + '</th><td>' + cell + '</td></tr>';
+  }).join('');
+  return '<details class="props"><summary>속성</summary><table>' + trs + '</table></details>';
+}
+
+/* [[문서|표시]] → 표시, [[문서#제목]] → 문서 › 제목, 남은 ![[그림]] → 안내 문구 (코드 안은 건드리지 않음) */
+function flattenObsidian(md) {
+  return md.split(/(```[\s\S]*?```|`[^`\n]*`)/).map((seg, i) => {
+    if (i % 2) return seg;
+    return seg
+      .replace(/!\[\[([^\]|]+?)(?:\|[^\]]*)?\]\]/g, (_, t) => '*(그림 없음: ' + t + ')*')
+      .replace(/(^|[^!])\[\[([^\]|]+?)(?:\|([^\]]+?))?\]\]/g, (_, pre, t, a) => pre + (a || t.replace(/#/g, ' › ')))
+      /* "180만~182만" 같은 범위 표기의 ~ 한 개를 marked가 취소선으로 오해해 두 ~ 사이를 통째로 지우고
+         뒤의 굵은 글씨·코드 표시까지 깨뜨린다. 옵시디언처럼 ~~두 개만 취소선으로 두고 한 개는 일반 글자로 만든다. */
+      .replace(/(^|[^~\\])~(?!~)/g, '$1\\~')
+      /* *"따옴표 강조"*와 처럼 뒤에 한글 조사가 붙으면 CommonMark가 강조로 인식 못 해 별표가 그대로 보인다 → 직접 <em>으로 */
+      .replace(/(^|[^*\w])\*([“"][^"”*\n]+[”"])\*/g, '$1<em>$2</em>')
+      /* **굵게(괄호)**이 / 글자**("따옴표")** 처럼 구두점과 한글이 맞닿은 굵은 글씨도 같은 이유로 인식이 안 된다 → 직접 <strong>으로 */
+      .replace(/\*\*([^*\n]*?[\p{P}\p{S}])\*\*(?=[\p{L}\p{N}])/gu, '<strong>$1</strong>')
+      .replace(/([\p{L}\p{N}])\*\*([\p{P}\p{S}][^*\n]*?)\*\*/gu, '$1<strong>$2</strong>');
+  }).join('');
+}
+
+function renderDoc(md) {
+  const fm = splitFrontmatter(md);
+  return propsHtml(fm.rows) + marked.parse(flattenObsidian(fm.body));
+}
+
+/* > [!종류] 제목 → 제목 줄을 굵게, 표시 글자([!abstract])는 제거 */
+function enhanceCallouts(root) {
+  root.querySelectorAll('blockquote').forEach(bq => {
+    const p = bq.firstElementChild;
+    if (!p || p.tagName !== 'P') return;
+    const m = p.innerHTML.match(/^\s*\[!([A-Za-z]+)\][+-]?\s*/);
+    if (!m) return;
+    bq.classList.add('callout', 'callout-' + m[1].toLowerCase());
+    const rest = p.innerHTML.slice(m[0].length);
+    const nl = rest.search(/\n|<br\s*\/?>/);
+    const title = nl >= 0 ? rest.slice(0, nl) : rest;
+    const tail = nl >= 0 ? rest.slice(nl).replace(/^\s*(?:<br\s*\/?>)?\s*/, '') : '';
+    p.innerHTML = '<span class="callout-title">' + title + '</span>' + tail;
+  });
+}
+
+function wrapTables(root) {
+  root.querySelectorAll('table').forEach(t => {
+    if (t.parentElement.classList.contains('tbl-wrap') || t.closest('details.props')) return;
+    const w = document.createElement('div');
+    w.className = 'tbl-wrap';
+    t.parentNode.insertBefore(w, t);
+    w.appendChild(t);
+  });
+}
+
+/* ===== [LIGHTBOX] 본문 그림 클릭 → 확대 (다시 누르면 원본 크기, 바깥 누르면 닫기) ===== */
+const lightbox = document.createElement('div');
+lightbox.id = 'lightbox';
+const lbImg = document.createElement('img');
+lightbox.appendChild(lbImg);
+document.body.appendChild(lightbox);
+lightbox.addEventListener('click', (e) => {
+  if (e.target === lbImg) lbImg.classList.toggle('full');
+  else lightbox.classList.remove('open');
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') lightbox.classList.remove('open'); });
+content.addEventListener('click', (e) => {
+  const img = e.target.closest('img');
+  if (!img) return;
+  lbImg.src = img.src;
+  lbImg.classList.remove('full');
+  lightbox.classList.add('open');
+});
 
 /* ===== [HOME] 전체 목록 페이지 ===== */
 function renderHome() {
