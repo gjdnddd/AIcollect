@@ -166,10 +166,27 @@ main {
 
 /* ===== [IMG] 본문 그림 + 클릭 확대 ===== */
 #content img { max-width: 100%; height: auto; display: block; margin: 12px 0; border: 1px solid var(--border); border-radius: 6px; cursor: zoom-in; }
-#lightbox { display: none; position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.88); overflow: auto; }
+/* 그림 뷰어: 확대·축소·이동을 자유롭게 (폰 두 손가락 / PC 휠·끌기 / 버튼) */
+#lightbox { display: none; position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,0.96); overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; }
 #lightbox.open { display: block; }
-#lightbox img { display: block; max-width: 96vw; max-height: 94vh; margin: 3vh auto; background: #fff; cursor: zoom-in; }
-#lightbox img.full { max-width: none; max-height: none; margin: 0; cursor: zoom-out; }
+#lightbox img {
+  position: absolute; left: 0; top: 0; max-width: none; max-height: none; margin: 0; border: none; border-radius: 0;
+  transform-origin: 0 0; background: #fff; cursor: grab; will-change: transform;
+  -webkit-user-drag: none; user-select: none; touch-action: none;
+}
+#lightbox.panning img { cursor: grabbing; }
+#lightbox img.anim { transition: transform .18s ease-out; }
+#lbBar {
+  position: absolute; top: 0; left: 0; right: 0; height: 46px; z-index: 2; display: flex; align-items: center;
+  justify-content: center; gap: 6px; padding: 0 8px; background: rgba(0,0,0,0.88);
+}
+#lbBar button {
+  min-width: 40px; height: 34px; padding: 0 10px; border: 1px solid rgba(255,255,255,0.35); border-radius: 6px;
+  background: rgba(255,255,255,0.1); color: #fff; font-size: 14px; cursor: pointer;
+}
+#lbBar button:active { background: rgba(255,255,255,0.3); }
+#lbBar .lb-pct { min-width: 48px; text-align: center; color: #fff; font-size: 13px; }
+#lbBar .lb-close { margin-left: 6px; }
 
 /* ===== [BACKDROP] 모바일 사이드바 배경 ===== */
 #backdrop {
@@ -502,23 +519,173 @@ function wrapTables(root) {
   });
 }
 
-/* ===== [LIGHTBOX] 본문 그림 클릭 → 확대 (다시 누르면 원본 크기, 바깥 누르면 닫기) ===== */
+/* ===== [LIGHTBOX] 본문 그림 클릭 → 자유 확대·축소·이동 =====
+   폰: 두 손가락 벌리기/오므리기 · 한 손가락 끌기 · 두 번 탭(맞춤↔원본)
+   PC: 마우스 휠(커서 기준) · 끌기 · 두 번 클릭 · 키보드 + − 0 1 Esc
+   버튼: － ＋ 맞춤 원본 ✕  /  범위: 화면 맞춤의 절반 ~ 원본 크기의 4배 */
 const lightbox = document.createElement('div');
 lightbox.id = 'lightbox';
 const lbImg = document.createElement('img');
-lightbox.appendChild(lbImg);
+lbImg.draggable = false;
+lbImg.alt = '';
+const lbBar = document.createElement('div');
+lbBar.id = 'lbBar';
+const lbPct = document.createElement('span');
+lbPct.className = 'lb-pct';
+function lbBtn(label, title, fn, cls) {
+  const b = document.createElement('button');
+  b.type = 'button'; b.textContent = label; b.title = title; b.setAttribute('aria-label', title);
+  if (cls) b.className = cls;
+  b.addEventListener('click', (e) => { e.stopPropagation(); fn(); });
+  return b;
+}
+lbBar.append(
+  lbBtn('－', '축소', () => lbZoomBy(1 / 1.4, true)),
+  lbPct,
+  lbBtn('＋', '확대', () => lbZoomBy(1.4, true)),
+  lbBtn('맞춤', '화면에 맞춤', () => lbFitView(true)),
+  lbBtn('원본', '원본 크기(100%)', () => lbSetScale(1, true)),
+  lbBtn('✕', '닫기', () => lbClose(), 'lb-close')
+);
+['pointerdown', 'wheel', 'dblclick'].forEach(t => lbBar.addEventListener(t, (e) => e.stopPropagation()));
+lightbox.append(lbImg, lbBar);
 document.body.appendChild(lightbox);
-lightbox.addEventListener('click', (e) => {
-  if (e.target === lbImg) lbImg.classList.toggle('full');
-  else lightbox.classList.remove('open');
+
+let lbNW = 1, lbNH = 1;       /* 그림 원본 크기(px) */
+let lbS = 1, lbTX = 0, lbTY = 0; /* 배율 · 이동(화면 px) */
+let lbFit = 1;                /* 화면 맞춤 배율 */
+const lbPtrs = new Map();     /* 눌린 포인터 */
+let lbGesture = null;         /* 진행 중인 제스처(끌기/핀치) */
+let lbLastTap = { t: 0, x: 0, y: 0 };
+
+/* 화면 크기를 못 읽는 순간(회전 직후 등)에도 배율이 음수·NaN이 되지 않게 보정 */
+function lbVW() { return lightbox.clientWidth || window.innerWidth || 360; }
+function lbVH() { return lightbox.clientHeight || window.innerHeight || 640; }
+function lbCalcFit() { return Math.max(0.02, Math.min(1, (lbVW() - 16) / lbNW, (lbVH() - 64) / lbNH)); }
+function lbMinS() { return lbFit * 0.5; }
+function lbMaxS() { return Math.max(4, lbFit * 4); }
+function lbClamp() {
+  const vw = lbVW(), vh = lbVH(), m = 48;
+  lbS = Math.min(lbMaxS(), Math.max(lbMinS(), lbS));
+  const w = lbNW * lbS, h = lbNH * lbS;
+  lbTX = w <= vw ? (vw - w) / 2 : Math.min(m, Math.max(vw - w - m, lbTX));
+  lbTY = h <= vh ? (vh - h) / 2 : Math.min(m + 46, Math.max(vh - h - m, lbTY));
+}
+function lbApply(anim) {
+  lbClamp();
+  if (anim) { lbImg.classList.add('anim'); setTimeout(() => lbImg.classList.remove('anim'), 220); }
+  lbImg.style.transform = 'translate(' + lbTX + 'px,' + lbTY + 'px) scale(' + lbS + ')';
+  lbPct.textContent = Math.round(lbS * 100) + '%';
+}
+/* (cx, cy) 화면 좌표의 그림 지점을 고정한 채 배율 변경 */
+function lbZoomAt(newS, cx, cy, anim) {
+  const s = Math.min(lbMaxS(), Math.max(lbMinS(), newS));
+  const ix = (cx - lbTX) / lbS, iy = (cy - lbTY) / lbS;
+  lbS = s; lbTX = cx - ix * s; lbTY = cy - iy * s;
+  lbApply(anim);
+}
+function lbZoomBy(f, anim) { lbZoomAt(lbS * f, lbVW() / 2, lbVH() / 2, anim); }
+function lbSetScale(s, anim) { lbZoomAt(s, lbVW() / 2, lbVH() / 2, anim); }
+function lbFitView(anim) {
+  const vw = lbVW(), vh = lbVH();
+  lbFit = lbCalcFit();
+  lbS = lbFit;
+  lbTX = (vw - lbNW * lbS) / 2; lbTY = (vh - lbNH * lbS) / 2 + 20;
+  lbApply(anim);
+}
+function lbOpen(src) {
+  lbImg.style.transform = 'translate(-99999px,0)'; /* 로딩 중 깜빡임 방지 */
+  lightbox.classList.add('open');
+  const start = () => { lbNW = lbImg.naturalWidth || 1; lbNH = lbImg.naturalHeight || 1; lbImg.style.width = lbNW + 'px'; lbImg.style.height = lbNH + 'px'; lbFitView(false); };
+  lbImg.onload = start;
+  lbImg.src = src;
+  if (lbImg.complete && lbImg.naturalWidth) start();
+}
+function lbClose() { lightbox.classList.remove('open', 'panning'); lbPtrs.clear(); lbGesture = null; }
+
+/* 휠: 커서 위치 기준 확대·축소 (트랙패드 핀치는 ctrlKey로 들어옴) */
+lightbox.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const k = e.ctrlKey ? 0.01 : 0.0018;
+  lbZoomAt(lbS * Math.exp(-e.deltaY * k), e.clientX, e.clientY, false);
+}, { passive: false });
+
+lightbox.addEventListener('pointerdown', (e) => {
+  lbPtrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  try { lightbox.setPointerCapture(e.pointerId); } catch (_) {}
+  if (lbPtrs.size === 1) {
+    lbGesture = { type: 'pan', x0: e.clientX, y0: e.clientY, tx0: lbTX, ty0: lbTY, moved: false, onImg: e.target === lbImg, t0: Date.now() };
+  } else if (lbPtrs.size === 2) {
+    const [a, b] = [...lbPtrs.values()];
+    lbGesture = { type: 'pinch', d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, s0: lbS, tx0: lbTX, ty0: lbTY, mx0: (a.x + b.x) / 2, my0: (a.y + b.y) / 2, moved: true };
+  }
 });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape') lightbox.classList.remove('open'); });
+lightbox.addEventListener('pointermove', (e) => {
+  if (!lbPtrs.has(e.pointerId) || !lbGesture) return;
+  lbPtrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (lbGesture.type === 'pan' && lbPtrs.size === 1) {
+    const dx = e.clientX - lbGesture.x0, dy = e.clientY - lbGesture.y0;
+    if (!lbGesture.moved && Math.hypot(dx, dy) < 6) return;
+    lbGesture.moved = true;
+    lightbox.classList.add('panning');
+    lbTX = lbGesture.tx0 + dx; lbTY = lbGesture.ty0 + dy;
+    lbApply(false);
+  } else if (lbGesture.type === 'pinch' && lbPtrs.size >= 2) {
+    const [a, b] = [...lbPtrs.values()];
+    const d = Math.hypot(a.x - b.x, a.y - b.y) || 1, mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    const s = Math.min(lbMaxS(), Math.max(lbMinS(), lbGesture.s0 * d / lbGesture.d0));
+    const ix = (lbGesture.mx0 - lbGesture.tx0) / lbGesture.s0, iy = (lbGesture.my0 - lbGesture.ty0) / lbGesture.s0;
+    lbS = s; lbTX = mx - ix * s; lbTY = my - iy * s;
+    lbApply(false);
+  }
+});
+function lbPointerEnd(e) {
+  if (!lbPtrs.has(e.pointerId)) return;
+  const g = lbGesture;
+  lbPtrs.delete(e.pointerId);
+  lightbox.classList.remove('panning');
+  if (lbPtrs.size === 0 && g && g.type === 'pan' && !g.moved && e.type === 'pointerup') {
+    /* 탭: 그림 밖 빈 곳이면 닫기, 그림 위 두 번 탭이면 맞춤↔원본 */
+    const now = Date.now();
+    const dbl = now - lbLastTap.t < 320 && Math.hypot(e.clientX - lbLastTap.x, e.clientY - lbLastTap.y) < 30;
+    lbLastTap = { t: dbl ? 0 : now, x: e.clientX, y: e.clientY };
+    if (dbl) {
+      const atFit = Math.abs(lbS - lbFit) / lbFit < 0.06;
+      if (atFit) lbZoomAt(Math.max(1, lbFit * 2), e.clientX, e.clientY, true); /* 맞춤 → 탭한 곳 기준 원본 이상으로 */
+      else lbFitView(true);                                                      /* 확대 상태 → 맞춤 */
+    } else if (!g.onImg) {
+      setTimeout(() => { if (lbLastTap.t) lbClose(); }, 330); /* 두 번 탭이 아님이 확정되면 닫기 */
+    }
+  }
+  if (lbPtrs.size === 1) {
+    /* 핀치 → 한 손가락 남음: 그 손가락으로 이어서 끌기 */
+    const p = [...lbPtrs.values()][0];
+    lbGesture = { type: 'pan', x0: p.x, y0: p.y, tx0: lbTX, ty0: lbTY, moved: true, onImg: true, t0: Date.now() };
+  } else if (lbPtrs.size === 0) {
+    lbGesture = null;
+  }
+}
+lightbox.addEventListener('pointerup', lbPointerEnd);
+lightbox.addEventListener('pointercancel', lbPointerEnd);
+
+document.addEventListener('keydown', (e) => {
+  if (!lightbox.classList.contains('open')) return;
+  if (e.key === 'Escape') lbClose();
+  else if (e.key === '+' || e.key === '=') lbZoomBy(1.25, true);
+  else if (e.key === '-' || e.key === '_') lbZoomBy(1 / 1.25, true);
+  else if (e.key === '0') lbFitView(true);
+  else if (e.key === '1') lbSetScale(1, true);
+});
+window.addEventListener('resize', () => {
+  if (!lightbox.classList.contains('open')) return;
+  const wasFit = Math.abs(lbS - lbFit) / lbFit < 0.06;
+  lbFit = lbCalcFit();
+  if (wasFit) lbFitView(false); else lbApply(false);
+});
 content.addEventListener('click', (e) => {
   const img = e.target.closest('img');
   if (!img) return;
-  lbImg.src = img.src;
-  lbImg.classList.remove('full');
-  lightbox.classList.add('open');
+  lbOpen(img.src);
 });
 
 /* ===== [HOME] 전체 목록 페이지 ===== */
