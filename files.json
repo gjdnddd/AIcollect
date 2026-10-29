@@ -16,6 +16,12 @@
       ]
     },
     {
+      "title": "국장복기 · 본인시황",
+      "items": [
+        { "title": "본인시황 2026-10", "file": "content/본인시황/본인시황_2026-10.md", "url": "https://gjdnddd.github.io/AIcollect/content/%EB%B3%B8%EC%9D%B8%EC%8B%9C%ED%99%A9/%EB%B3%B8%EC%9D%B8%EC%8B%9C%ED%99%A9_2026-10.md" }
+      ]
+    },
+    {
       "title": "AI 공통",
       "items": [
         { "title": "AI 일반", "file": "content/AI일반.md", "url": "https://gjdnddd.github.io/AIcollect/content/AI일반.md" },
