@@ -429,6 +429,7 @@ async function openItem(gi, ii) {
   }
   content.innerHTML = renderDoc(md);
   enhanceCallouts(content);
+  neutralizeDeadLinks(content);
   wrapTables(content);
   buildToc();
   window.scrollTo(0, 0);
@@ -481,16 +482,49 @@ function flattenObsidian(md) {
          뒤의 굵은 글씨·코드 표시까지 깨뜨린다. 옵시디언처럼 ~~두 개만 취소선으로 두고 한 개는 일반 글자로 만든다. */
       .replace(/(^|[^~\\])~(?!~)/g, '$1\\~')
       /* *"따옴표 강조"*와 처럼 뒤에 한글 조사가 붙으면 CommonMark가 강조로 인식 못 해 별표가 그대로 보인다 → 직접 <em>으로 */
-      .replace(/(^|[^*\w])\*([“"][^"”*\n]+[”"])\*/g, '$1<em>$2</em>')
-      /* **굵게(괄호)**이 / 글자**("따옴표")** 처럼 구두점과 한글이 맞닿은 굵은 글씨도 같은 이유로 인식이 안 된다 → 직접 <strong>으로 */
-      .replace(/\*\*([^*\n]*?[\p{P}\p{S}])\*\*(?=[\p{L}\p{N}])/gu, '<strong>$1</strong>')
-      .replace(/([\p{L}\p{N}])\*\*([\p{P}\p{S}][^*\n]*?)\*\*/gu, '$1<strong>$2</strong>');
+      .replace(/(^|[^*\w])\*([“"][^"”*\n]+[”"])\*/g, '$1<em>$2</em>');
   }).join('');
+}
+
+/* **굵게**: CommonMark는 "**굵게(괄호)**이", "글자**("따옴표")**"처럼 구두점과 한글이 맞닿으면 굵게로 인식하지 못한다
+   (옵시디언은 굵게로 보여줌). 규칙을 추측하는 대신, 한 줄 안의 ** 를 앞에서부터 순서대로 짝지어 직접 <strong>으로 바꾼다.
+   - 코드(`…`)와 코드 블록 안은 건드리지 않고, 한 줄의 ** 개수가 홀수이거나 안쪽이 공백으로 시작·끝나면 그 줄은 marked에 맡긴다.
+   - 표 행에서 굵게가 셀 경계(|)를 넘으면 표가 깨지므로 그 줄도 맡긴다. */
+function boldPairs(masked, isTable) {
+  const runs = [];
+  masked.replace(/\*+/g, (m, idx) => { if (m.length === 2) runs.push(idx); return m; });
+  if (runs.length < 2 || runs.length % 2 === 1) return masked;
+  let out = '', last = 0;
+  for (let k = 0; k < runs.length; k += 2) {
+    const inner = masked.slice(runs[k] + 2, runs[k + 1]);
+    if (!inner.length || /^\s|\s$/.test(inner)) return masked;
+    if (isTable && /(^|[^\\])\|/.test(inner)) return masked;
+    out += masked.slice(last, runs[k]) + '<strong>' + inner + '</strong>';
+    last = runs[k + 1] + 2;
+  }
+  return out + masked.slice(last);
+}
+/* 한 줄 처리: 코드는 가려 두고 → **굵게** 짝짓기 → 옵시디언 형광펜 ==강조== → <mark> → 코드 복원
+   (형광펜 안에 `코드`나 단일 = 가 섞여도 한 줄 안에서는 모두 잡힌다) */
+function fixInlineLine(line) {
+  if (line.indexOf('**') < 0 && line.indexOf('==') < 0) return line;
+  const codes = [];
+  let s = line.replace(/`[^`\n]*`/g, m => { codes.push(m); return '\u0000' + (codes.length - 1) + '\u0000'; });
+  s = boldPairs(s, /^\s*\|/.test(line));
+  s = s.replace(/==(?=[^\s=])((?:(?!==)[^\n])*?[^\s=])==/g, '<mark>$1</mark>');
+  return s.replace(/\u0000(\d+)\u0000/g, (_, i) => codes[+i]);
+}
+function fixBold(md) {
+  let fence = false;
+  return md.split('\n').map(line => {
+    if (/^\s*(```|~~~)/.test(line)) { fence = !fence; return line; }
+    return fence ? line : fixInlineLine(line);
+  }).join('\n');
 }
 
 function renderDoc(md) {
   const fm = splitFrontmatter(md);
-  return propsHtml(fm.rows) + marked.parse(flattenObsidian(fm.body));
+  return propsHtml(fm.rows) + marked.parse(flattenObsidian(fixBold(fm.body)));
 }
 
 /* > [!종류] 제목 → 제목 줄을 굵게, 표시 글자([!abstract])는 제거 */
@@ -506,6 +540,25 @@ function enhanceCallouts(root) {
     const title = nl >= 0 ? rest.slice(0, nl) : rest;
     const tail = nl >= 0 ? rest.slice(nl).replace(/^\s*(?:<br\s*\/?>)?\s*/, '') : '';
     p.innerHTML = '<span class="callout-title">' + title + '</span>' + tail;
+  });
+}
+
+/* 문서 안의 다른 .md 파일 링크(예: 본인시황_2026.md)는 PC 폴더 기준이라 대시보드에는 없다.
+   누르면 빈 404 페이지로 넘어가므로, 대시보드 목록에 있는 문서가 아니면 일반 글자로 바꾼다. */
+function neutralizeDeadLinks(root) {
+  const known = new Set();
+  groups.forEach(g => g.items.forEach(i => known.add(i.file)));
+  root.querySelectorAll('a[href]').forEach(a => {
+    const href = a.getAttribute('href') || '';
+    if (/^(https?:|mailto:|#)/i.test(href)) return;
+    let path = href.split('#')[0];
+    try { path = decodeURIComponent(path); } catch (_) {}
+    if (!/\.md$/i.test(path) || known.has(path)) return;
+    const s = document.createElement('span');
+    s.className = 'deadlink';
+    s.title = '대시보드에 없는 문서';
+    s.innerHTML = a.innerHTML;
+    a.replaceWith(s);
   });
 }
 
