@@ -461,11 +461,19 @@ function splitFrontmatter(md) {
   return { rows, body: md.slice(m[0].length) };
 }
 
+/* 속성 값 안의 **굵게** · ==형광펜== · `코드` 는 글자 그대로 두지 않고 서식으로 보여준다 */
+function propInline(s) {
+  return escHtml(s)
+    .replace(/\*\*([^*]+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/==([^=]+?)==/g, '<mark>$1</mark>')
+    .replace(/`([^`]+?)`/g, '<code>$1</code>');
+}
+
 function propsHtml(rows) {
   if (!rows || !rows.length) return '';
   const trs = rows.map(r => {
     const isList = r.key === 'tags' || r.vals.length > 1;
-    const cell = isList ? r.vals.map(v => '<span class="chip">' + escHtml(v) + '</span>').join('') : escHtml(r.vals.join(' '));
+    const cell = isList ? r.vals.map(v => '<span class="chip">' + propInline(v) + '</span>').join('') : propInline(r.vals.join(' '));
     return '<tr><th>' + escHtml(r.key) + '</th><td>' + cell + '</td></tr>';
   }).join('');
   return '<details class="props"><summary>속성</summary><table>' + trs + '</table></details>';
@@ -561,6 +569,19 @@ function neutralizeDeadLinks(root) {
     a.replaceWith(s);
   });
 }
+
+/* 문서 안의 링크가 대시보드의 다른 문서를 가리키면 원본 md 파일로 이동하지 않고 앱 안에서 연다 */
+content.addEventListener('click', (e) => {
+  const a = e.target.closest('a[href]');
+  if (!a || e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;
+  const href = a.getAttribute('href') || '';
+  if (/^(https?:|mailto:|#)/i.test(href)) return;
+  let path = href.split('#')[0];
+  try { path = decodeURIComponent(path); } catch (_) {}
+  for (let g = 0; g < groups.length; g++) for (let i = 0; i < groups[g].items.length; i++) {
+    if (groups[g].items[i].file === path) { e.preventDefault(); openItem(g, i); return; }
+  }
+});
 
 function wrapTables(root) {
   root.querySelectorAll('table').forEach(t => {
